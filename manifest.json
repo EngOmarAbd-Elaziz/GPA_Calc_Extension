@@ -4,13 +4,19 @@
   "description": "This extension calculates the GPA of FCAI students",
   "version": "0.1",
   "action": {
-    "default_popup": "popup/popup.html"
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "images/gpa-calc16.png",
+      "32": "images/gpa-calc32.png",
+      "48": "images/gpa-calc48.png",
+      "128": "images/gpa-calc128.png"
+    }
   },
   "icons": {
-    "16": "/images/icon16.png",
-    "32": "/images/icon32.png",
-    "48": "/images/icon48.png",
-    "128": "/images/icon128.png"
+    "16": "images/gpa-calc16.png",
+    "32": "images/gpa-calc32.png",
+    "48": "images/gpa-calc48.png",
+    "128": "images/gpa-calc128.png"
   },
 
   "content_scripts": [
