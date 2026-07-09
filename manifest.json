@@ -3,6 +3,7 @@
   "name": "GPA Calc Extension",
   "description": "This extension calculates the GPA of FCAI students",
   "version": "0.1",
+  "author": "Omar Abdelaziz",
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {

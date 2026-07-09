@@ -1,7 +1,10 @@
 # FCAI GPA Calculator Extension
 A chrome Extension to calculate the GPA from the FCAI website
-<img width="1919" height="1029" alt="Screenshot 2026-07-09 143523" src="https://github.com/user-attachments/assets/17bea43a-a1e4-4642-84ad-c4f9fef57255" />
 
+## Author
+Omar Abdelaziz
+
+<img width="1919" height="1029" alt="Screenshot 2026-07-09 143523" src="https://github.com/user-attachments/assets/17bea43a-a1e4-4642-84ad-c4f9fef57255" />
 
 # SETUP
 ## 1. Clone the repo to a directory of your liking

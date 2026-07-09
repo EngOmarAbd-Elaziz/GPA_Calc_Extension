@@ -7,21 +7,10 @@ function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function markVisible(element) {
-  element.style.display = "block";
-  requestAnimationFrame(() => {
-    element.classList.add("visible");
-  });
-}
-
-function markHidden(element) {
-  element.classList.remove("visible");
-  const duration = 240;
-  setTimeout(() => {
-    if (!element.classList.contains("visible")) {
-      element.style.display = "none";
-    }
-  }, duration);
+function setScreenState(element, active) {
+  if (!element) return;
+  element.classList.toggle("active", active);
+  element.classList.toggle("hidden", !active);
 }
 
 function showLoading() {
@@ -30,9 +19,9 @@ function showLoading() {
   const gpaDiv = document.querySelector(".gpa-div");
   const error = document.querySelector(".error");
 
-  markHidden(gpaDiv);
-  markHidden(error);
-  markVisible(loading);
+  setScreenState(loading, true);
+  setScreenState(gpaDiv, false);
+  setScreenState(error, false);
 }
 
 async function showError(message) {
@@ -42,10 +31,10 @@ async function showError(message) {
   const gpaDiv = document.querySelector(".gpa-div");
   const error = document.querySelector(".error");
 
-  markHidden(loading);
-  markHidden(gpaDiv);
-  markVisible(error);
   error.textContent = message;
+  setScreenState(loading, false);
+  setScreenState(gpaDiv, false);
+  setScreenState(error, true);
 }
 
 async function ensureMinimumLoading() {
@@ -72,8 +61,9 @@ async function showGpaScreen(gpa) {
   const gpaText = document.querySelector("#gpa");
 
   gpaText.textContent = gpa;
-  markHidden(loading);
-  markVisible(gpaDiv);
+  setScreenState(loading, false);
+  setScreenState(gpaDiv, true);
+
   gpaTransitioning = false;
 }
 
