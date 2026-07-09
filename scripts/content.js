@@ -254,11 +254,11 @@
     return Math.floor((totalGrade / totalHour) * 100) / 100;
   }
 
-  function sendToWorker(gpa) {
+  function sendToWorker(gpa, force = false) {
     if (gpa === null || gpa === undefined || Number.isNaN(gpa)) {
       return;
     }
-    if (gpa === lastSentGpa) {
+    if (!force && gpa === lastSentGpa) {
       return;
     }
 
@@ -266,7 +266,7 @@
     chrome.runtime.sendMessage({ from: "content", to: "popup", data: gpa });
   }
 
-  function tryCalculateFromDOM() {
+  function tryCalculateFromDOM(force = false) {
     const tables = document.querySelectorAll("table");
     if (tables.length <= 1) {
       return;
@@ -276,11 +276,11 @@
     const rows = lastTable.querySelectorAll("tbody tr");
     const courses = getCourseFromDOM(rows);
     if (!courses.length) {
-    return;
+      return;
     }
 
     const gpa = calculateGPAFromDOM(courses);
-    sendToWorker(gpa);
+    sendToWorker(gpa, force);
   }
 
   function handleCustomEvent(event) {
@@ -367,30 +367,6 @@
     window.addEventListener("replaceState", handleRouteChange);
   }
 
-  function tryCalculateFromDOM() {
-    const tables = Array.from(document.querySelectorAll("table"));
-    if (!tables.length) {
-      return;
-    }
-
-    const rows = tables.reduce((acc, table) => {
-      const tableRows = Array.from(table.querySelectorAll("tbody tr"));
-      return acc.concat(tableRows);
-    }, []);
-
-    if (!rows.length) {
-      return;
-    }
-
-    const courses = getCourseFromDOM(rows);
-    if (!courses.length) {
-      return;
-    }
-
-    const gpa = calculateGPAFromDOM(courses);
-    sendToWorker(gpa);
-  }
-
   function main() {
     if (!checkURL()) {
       return;
@@ -419,6 +395,14 @@
     setInterval(handleRouteChange, 3000);
     handleRouteChange();
   }
+
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message && message.action === "CALCULATE_GPA") {
+      tryCalculateFromDOM(true);
+      sendResponse({ status: "requested" });
+    }
+    return true;
+  });
 
   init();
 

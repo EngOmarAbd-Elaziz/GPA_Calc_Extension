@@ -1,5 +1,20 @@
-let GPA = null;
+const gpaCache = new Map();
 let popupStatus = "inactive";
+let popupTabId = null;
+
+function cacheGpa(tabId, gpa) {
+  if (tabId === undefined || tabId === null) {
+    return;
+  }
+  gpaCache.set(tabId, gpa);
+}
+
+function getCachedGpa(tabId) {
+  if (tabId === undefined || tabId === null) {
+    return undefined;
+  }
+  return gpaCache.get(tabId);
+}
 
 async function ensureContentScript(tabId) {
   try {
@@ -24,12 +39,35 @@ function sendToPopup(gpa) {
   );
 }
 
+function requestContentRecalc(tabId) {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, { action: "CALCULATE_GPA" }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.warn("Content script not available for CALCULATE_GPA:", chrome.runtime.lastError.message);
+        return resolve(false);
+      }
+      resolve(true);
+    });
+  });
+}
+
+async function ensureInjectedAndRequestRecalc(tabId) {
+  const sent = await requestContentRecalc(tabId);
+  if (sent) {
+    return;
+  }
+
+  await ensureContentScript(tabId);
+  await requestContentRecalc(tabId);
+}
+
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   if (message.from === "content" && message.to === "popup") {
-    GPA = message.data;
-    console.log("Background received GPA:", GPA, "popupStatus:", popupStatus);
-    if (popupStatus === "active" && GPA !== null && GPA !== undefined) {
-      sendToPopup(GPA);
+    const tabId = sender.tab?.id;
+    cacheGpa(tabId, message.data);
+    console.log("Background received GPA:", message.data, "popupStatus:", popupStatus, "tabId:", tabId);
+    if (popupStatus === "active" && tabId === popupTabId && message.data !== null && message.data !== undefined) {
+      sendToPopup(message.data);
     }
   } else if (message.from === "popup" && message.to === "background") {
     popupStatus = "active";
@@ -40,14 +78,14 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       tabId = tabs[0]?.id;
     }
 
-    if (tabId !== undefined) {
-      await ensureContentScript(tabId);
-    }
+    popupTabId = tabId;
 
-    if (GPA !== null && GPA !== undefined) {
-      sendResponse({ gpa: GPA });
+    if (tabId !== undefined) {
+      const cachedGpa = getCachedGpa(tabId);
+      sendResponse(cachedGpa !== undefined ? { gpa: cachedGpa } : { message: "calculating" });
+      ensureInjectedAndRequestRecalc(tabId);
     } else {
-      sendResponse({ message: "not calculated yet" });
+      sendResponse({ message: "tab_not_found" });
     }
   }
   return true;
