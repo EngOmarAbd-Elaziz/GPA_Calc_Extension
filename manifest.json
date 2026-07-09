@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "GPA Calc Extension",
   "description": "This extension calculates the GPA of FCAI students",
-  "version": "0.1",
+  "version": "0.2",
   "author": "Omar Abdelaziz",
   "action": {
     "default_popup": "popup/popup.html",
