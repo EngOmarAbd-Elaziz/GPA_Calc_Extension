@@ -6,7 +6,7 @@ A chrome Extension to calculate the GPA from the FCAI website
 # SETUP
 ## 1. Clone the repo to a directory of your liking
 ```
-git clone 
+git clone https://github.com/EngOmarAbd-Elaziz/GPA_Calc_Extension.git
 ```
 
 ## 2. Enable developer mode
