@@ -1,37 +1,89 @@
-function addGPAToDOM(gpa) {
-  const gpaDiv = document.querySelector(".gpa-div");
-  const gpaText = document.querySelector("#gpa");
-  const loading = document.querySelector(".loading");
-  const error = document.querySelector(".error");
+const MIN_LOADING_DURATION_MS = 800;
+let popupOpenedAt = null;
+let pendingGpa = null;
+let gpaTransitioning = false;
 
-  loading.style.display = "none";
-  error.style.display = "none";
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  if (gpa !== undefined && gpa !== null && !Number.isNaN(gpa)) {
-    gpaDiv.style.display = "block";
-    gpaText.textContent = gpa;
-  }
+function markVisible(element) {
+  element.style.display = "block";
+  requestAnimationFrame(() => {
+    element.classList.add("visible");
+  });
+}
+
+function markHidden(element) {
+  element.classList.remove("visible");
+  const duration = 240;
+  setTimeout(() => {
+    if (!element.classList.contains("visible")) {
+      element.style.display = "none";
+    }
+  }, duration);
 }
 
 function showLoading() {
+  popupOpenedAt = Date.now();
   const loading = document.querySelector(".loading");
   const gpaDiv = document.querySelector(".gpa-div");
   const error = document.querySelector(".error");
 
-  loading.style.display = "block";
-  gpaDiv.style.display = "none";
-  error.style.display = "none";
+  markHidden(gpaDiv);
+  markHidden(error);
+  markVisible(loading);
 }
 
-function showError(message) {
+async function showError(message) {
+  await ensureMinimumLoading();
+
   const loading = document.querySelector(".loading");
   const gpaDiv = document.querySelector(".gpa-div");
   const error = document.querySelector(".error");
 
-  loading.style.display = "none";
-  gpaDiv.style.display = "none";
-  error.style.display = "block";
+  markHidden(loading);
+  markHidden(gpaDiv);
+  markVisible(error);
   error.textContent = message;
+}
+
+async function ensureMinimumLoading() {
+  if (!popupOpenedAt) {
+    return;
+  }
+  const elapsed = Date.now() - popupOpenedAt;
+  const remaining = MIN_LOADING_DURATION_MS - elapsed;
+  if (remaining > 0) {
+    await delay(remaining);
+  }
+}
+
+async function showGpaScreen(gpa) {
+  if (gpaTransitioning) {
+    return;
+  }
+
+  gpaTransitioning = true;
+  await ensureMinimumLoading();
+
+  const loading = document.querySelector(".loading");
+  const gpaDiv = document.querySelector(".gpa-div");
+  const gpaText = document.querySelector("#gpa");
+
+  gpaText.textContent = gpa;
+  markHidden(loading);
+  markVisible(gpaDiv);
+  gpaTransitioning = false;
+}
+
+function addGPAToDOM(gpa) {
+  if (gpa === undefined || gpa === null || Number.isNaN(gpa)) {
+    return;
+  }
+
+  pendingGpa = gpa;
+  showGpaScreen(gpa);
 }
 
 async function getCurrentTab() {

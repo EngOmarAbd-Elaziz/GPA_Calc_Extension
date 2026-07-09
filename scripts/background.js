@@ -1,6 +1,17 @@
 let GPA = null;
 let popupStatus = "inactive";
 
+async function ensureContentScript(tabId) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["scripts/content.js"],
+    });
+  } catch (error) {
+    console.error("Failed to inject content script:", error);
+  }
+}
+
 function sendToPopup(gpa) {
   chrome.runtime.sendMessage(
     { from: "background", to: "popup", gpa },
@@ -22,6 +33,16 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     }
   } else if (message.from === "popup" && message.to === "background") {
     popupStatus = "active";
+
+    let tabId = sender.tab?.id;
+    if (!tabId) {
+      const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      tabId = tabs[0]?.id;
+    }
+
+    if (tabId !== undefined) {
+      await ensureContentScript(tabId);
+    }
 
     if (GPA !== null && GPA !== undefined) {
       sendResponse({ gpa: GPA });
