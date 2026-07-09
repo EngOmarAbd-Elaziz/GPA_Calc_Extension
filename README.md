@@ -1,4 +1,4 @@
-# 🎓 FCAI GPA Calculator Extension
+# <img width="64" height="64" alt="gpa-calc128" src="https://github.com/user-attachments/assets/898ccdcb-45bf-4442-bd64-ae6285cd9e7d" /> FCAI GPA Calculator Extension
 
 A lightweight Chrome Extension that automatically calculates the cumulative GPA for students of the **Faculty of Computers and Artificial Intelligence – Cairo University** using the official FCAI grading system.
 
