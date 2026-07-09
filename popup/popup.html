@@ -54,6 +54,36 @@
             font-size: 37px;
         }
 
+        .loading {
+            display: none;
+            padding: 20px 15px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            margin: 15px;
+        }
+
+        .loading p {
+            margin: 0;
+            font-size: 1.1em;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 10px;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top-color: #ff4800;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         .error {
             display: none;
             padding: 15px;
@@ -69,6 +99,10 @@
     <div class="nav">
         <img src="../images/gpa-calc.png" alt="GPA_CALC_ICON">
         <h1>GPA Calc</h1>
+    </div>
+    <div class="loading">
+        <div class="spinner"></div>
+        <p>Loading GPA...</p>
     </div>
     <div class="gpa-div">
         <p>Your GPA is</p>

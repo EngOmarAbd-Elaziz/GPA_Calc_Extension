@@ -6,10 +6,8 @@ function sendToPopup(gpa) {
     { from: "background", to: "popup", gpa },
     (response) => {
       if (chrome.runtime.lastError) {
-        // Handle the error silently
         console.log("Runtime error:", chrome.runtime.lastError.message);
         popupStatus = "inactive";
-        return;
       }
     }
   );
@@ -18,28 +16,18 @@ function sendToPopup(gpa) {
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   if (message.from === "content" && message.to === "popup") {
     GPA = message.data;
-    console.log(GPA);
-    console.log(popupStatus);
-    if (popupStatus === "active") {
-      sendToPopup(message.gpa);
-      popupStatus = "inactive";
+    console.log("Background received GPA:", GPA, "popupStatus:", popupStatus);
+    if (popupStatus === "active" && GPA !== null && GPA !== undefined) {
+      sendToPopup(GPA);
     }
   } else if (message.from === "popup" && message.to === "background") {
-    if (GPA) {
+    popupStatus = "active";
+
+    if (GPA !== null && GPA !== undefined) {
       sendResponse({ gpa: GPA });
     } else {
-      sendResponse({ message: "not calculated yet" }, function (response) {
-        var lastError = chrome.runtime.lastError;
-        console.log(lastError);
-        if (lastError) {
-          console.log(lastError.message);
-          // 'Could not establish connection. Receiving end does not exist.'
-          return;
-        }
-      });
+      sendResponse({ message: "not calculated yet" });
     }
-
-    popupStatus = "active";
   }
   return true;
 });

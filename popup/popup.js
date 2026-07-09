@@ -1,17 +1,42 @@
 function addGPAToDOM(gpa) {
   const gpaDiv = document.querySelector(".gpa-div");
   const gpaText = document.querySelector("#gpa");
-  console.log(`request: ${gpa}`);
-  if (gpa) {
-    gpaDiv.style = "display:block;";
+  const loading = document.querySelector(".loading");
+  const error = document.querySelector(".error");
+
+  loading.style.display = "none";
+  error.style.display = "none";
+
+  if (gpa !== undefined && gpa !== null && !Number.isNaN(gpa)) {
+    gpaDiv.style.display = "block";
     gpaText.textContent = gpa;
   }
 }
 
+function showLoading() {
+  const loading = document.querySelector(".loading");
+  const gpaDiv = document.querySelector(".gpa-div");
+  const error = document.querySelector(".error");
+
+  loading.style.display = "block";
+  gpaDiv.style.display = "none";
+  error.style.display = "none";
+}
+
+function showError(message) {
+  const loading = document.querySelector(".loading");
+  const gpaDiv = document.querySelector(".gpa-div");
+  const error = document.querySelector(".error");
+
+  loading.style.display = "none";
+  gpaDiv.style.display = "none";
+  error.style.display = "block";
+  error.textContent = message;
+}
+
 async function getCurrentTab() {
-  let queryOptions = { active: true, lastFocusedWindow: true };
-  // `tab` will either be a `tabs.Tab` instance or `undefined`.
-  let [tab] = await chrome.tabs.query(queryOptions);
+  const queryOptions = { active: true, lastFocusedWindow: true };
+  const [tab] = await chrome.tabs.query(queryOptions);
   return tab;
 }
 
@@ -23,32 +48,36 @@ document.addEventListener("DOMContentLoaded", async function () {
     "http://newecom.fci-cu.edu.eg/#/courses-per-students/",
   ];
 
+  showLoading();
+
   const currentTab = await getCurrentTab();
-  console.log(currentTab.url);
-  if (urls.indexOf(currentTab.url) !== -1) {
-    // handshake with the worker thread to let it know that the popup is active
-    await chrome.runtime.sendMessage(
-      { from: "popup", to: "background", message: "handshake" },
-      function (response) {
-        console.log(response);
-        if (response.gpa) {
-          addGPAToDOM(response.gpa);
-        }
-      }
+  if (!currentTab || urls.indexOf(currentTab.url) === -1) {
+    showError(
+      `Please go to the FCAI grades page and signin for the extension to work\n ${urls[0]}`
     );
-  } else {
-    const error = document.querySelector(".error");
-    error.style.display = "block";
-    error.textContent = `Please go to the FCAI grades page and signin for the extension to work\n ${urls[0]}`;
+    return;
   }
+
+  chrome.runtime.sendMessage(
+    { from: "popup", to: "background", message: "handshake" },
+    function (response) {
+      if (chrome.runtime.lastError) {
+        console.error(chrome.runtime.lastError.message);
+        showError("Extension backend error. Please try again.");
+        return;
+      }
+
+      if (response && response.gpa !== undefined && response.gpa !== null) {
+        addGPAToDOM(response.gpa);
+      }
+    }
+  );
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.from === "background" && request.to === "popup") {
-    console.log(request);
-    if (request && request.gpa) {
-      const gpa = request.gpa;
-      addGPAToDOM(gpa);
+    if (request.gpa !== undefined && request.gpa !== null) {
+      addGPAToDOM(request.gpa);
     }
   }
 });

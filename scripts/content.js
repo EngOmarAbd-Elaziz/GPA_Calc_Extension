@@ -1,184 +1,248 @@
+const PAGE_URLS = [
+  "http://193.227.14.58/#/courses-per-students",
+  "http://193.227.14.58/#/courses-per-students/",
+  "http://newecom.fci-cu.edu.eg/#/courses-per-students",
+  "http://newecom.fci-cu.edu.eg/#/courses-per-students/",
+];
+
 const COURSE_HOUR_COLUMN_IDX = 3;
 const COURSE_GRADE_COLUMN_IDX = 6;
 const COURSE_NAME_COLUMN_IDX = 1;
+const EXCLUDED_COURSE_NAME = "Field Training";
 
-console.log("content.js is running");
+let lastSentGpa = null;
+let mutationObserver = null;
+let debounceTimer = null;
 
-/* function getCourseFromDOM(tableRows){
-  let arr = [];
-  tableRows.forEach(row => {
-    const columns = row.querySelectorAll('td');
-    if(!columns[COURSE_HOUR_COLUMN_IDX] || !columns[COURSE_HOUR_COLUMN_IDX].firstElementChild){
-      return [];
-    }
-
-    // Field Training is excluded from GPA
-    if(!(columns[COURSE_NAME_COLUMN_IDX].textContent == 'Field Training')){
-      const hours = Number(columns[COURSE_HOUR_COLUMN_IDX].firstElementChild.textContent);
-      const grade = columns[COURSE_GRADE_COLUMN_IDX].firstElementChild.textContent;
-      
-      arr.push({
-        hours,
-        grade
-      });
-    }
-  });
-
-  return arr;
+function checkURL() {
+  const url = window.location.href;
+  return PAGE_URLS.includes(url) || url.includes("courses-per-students");
 }
 
-function calculateGPA(courses){
+function getCourseFromDOM(tableRows) {
+  const courses = [];
+  tableRows.forEach((row) => {
+    const columns = row.querySelectorAll("td");
+    if (
+      !columns[COURSE_HOUR_COLUMN_IDX] ||
+      !columns[COURSE_HOUR_COLUMN_IDX].firstElementChild ||
+      !columns[COURSE_GRADE_COLUMN_IDX] ||
+      !columns[COURSE_GRADE_COLUMN_IDX].firstElementChild ||
+      !columns[COURSE_NAME_COLUMN_IDX]
+    ) {
+      return;
+    }
+
+    const courseName = columns[COURSE_NAME_COLUMN_IDX].textContent.trim();
+    if (courseName === EXCLUDED_COURSE_NAME) {
+      return;
+    }
+
+    const hours = Number(
+      columns[COURSE_HOUR_COLUMN_IDX].firstElementChild.textContent.trim()
+    );
+    const grade = columns[COURSE_GRADE_COLUMN_IDX].firstElementChild.textContent.trim();
+
+    if (!Number.isFinite(hours)) {
+      return;
+    }
+
+    courses.push({ hours, grade, courseName });
+  });
+  return courses;
+}
+
+function calculateGPAFromDOM(courses) {
+  const POINTS = {
+    "A+": 4.0,
+    A: 3.7,
+    "A-": 3.4,
+    "B+": 3.2,
+    B: 3.0,
+    "B-": 2.8,
+    "C+": 2.6,
+    C: 2.4,
+    "C-": 2.2,
+    "D+": 2.0,
+    D: 1.5,
+    "D-": 1.0,
+    F: 0,
+  };
+
   let totalGrade = 0;
   let totalHour = 0;
-  const POINTS = {
-    "A+" : 4.0,
-    "A" : 3.7,
-    "A-" : 3.4,
-    "B+" : 3.2,
-    "B" : 3.0,
-    "B-" : 2.8,
-    "C+" : 2.6,
-    "C" : 2.4,
-    "C-" : 2.2,
-    "D+" : 2.0,
-    "D" : 1.5,
-    "D-" : 1.0,
-    "F" : 0,
-  }
-  courses.forEach(course => {
-    if(POINTS[course.grade]){
-      totalGrade += (POINTS[course.grade] * course.hours);
-      // console.log(`${course.hours} ${course.grade}`);
-      console.log(`${POINTS[course.grade]} * ${course.hours} `);
-      totalHour += course.hours;
+
+  courses.forEach((course) => {
+    const points = POINTS[course.grade];
+    if (points === undefined) {
+      return;
     }
+
+    totalGrade += points * course.hours;
+    totalHour += course.hours;
   });
-  console.log(`GPA : ${totalGrade} / ${totalHour}`);
-  if(totalHour !== 0) // division by zero
-    return totalGrade/totalHour;
-  else 
+
+  if (totalHour === 0) {
     return 0;
-}
-
-function sendGpaToWorker(gpa){
-  chrome.runtime.sendMessage({ from: 'content', to: 'popup', gpa })
-}
-
-function checkURL(){
-  const url = window.location.href;
-  console.log(url);
-  const urls = [
-    'http://193.227.14.58/#/courses-per-students',
-    'http://193.227.14.58/#/courses-per-students/',
-    'http://newecom.fci-cu.edu.eg/#/courses-per-students',
-    'http://newecom.fci-cu.edu.eg/#/courses-per-students/'
-  ]
-
-  if(urls.indexOf(url) !== -1){
-    return true;
   }
-  return false;
+
+  return Math.floor((totalGrade / totalHour) * 100) / 100;
 }
 
-function main(){
-  
-  const tables = document.querySelectorAll('table')
-  if( checkURL() && tables.length  > 1){
-    const lastTable = tables[tables.length - 1];
-    const rows = lastTable.querySelectorAll('tbody tr')
-    const courses = getCourseFromDOM(rows);
-    const gpa = calculateGPA(courses);
-    sendGpaToWorker(gpa);
-  }
-}
+function calculateGPAFromApiFields(fields) {
+  let totalGrade = 0;
+  let totalHour = 0;
+  const failedCourses = [];
 
-const observer = new MutationObserver(main); 
-observer.observe(document.body, {subtree: true, childList: true, attributes: true,});
- */
-
-function sendToWorker(data) {
-  chrome.runtime.sendMessage({ from: "content", to: "popup", data });
-}
-
-function calculateGPA(fields) {
-  totalGrade = 0;
-  totalHour = 0;
-  failed_courses = [];
   fields.forEach((field) => {
     if (
-      field.points &&
+      field.points !== undefined &&
       field.course &&
-      field.course.code != "TR301" /* field training course */
+      field.course.code !== "TR301"
     ) {
-      let course_hours = field.course.numOfHours;
-      course_code = field.course.code;
-      let points = field.points;
-      let course_name = field.course.name;
+      const courseHours = field.course.numOfHours;
+      const courseCode = field.course.code;
+      const points = field.points;
 
-      if (points == 0) {
-        failed_courses.push({
-          hours: course_hours,
-          points: points,
-          code: course_code,
+      if (points === 0) {
+        failedCourses.push({
+          hours: courseHours,
+          points,
+          code: courseCode,
         });
       } else {
-        // check if the course is failed before
-        failed_courses.forEach((course) => {
-          if (course.code == course_code) {
-            // if the course is failed, then remove the failed one
-            failed_courses.remove(course);
-          }
-        });
+        const failedIndex = failedCourses.findIndex(
+          (course) => course.code === courseCode
+        );
+        if (failedIndex !== -1) {
+          failedCourses.splice(failedIndex, 1);
+        }
 
-        totalGrade += points * course_hours;
-        // console.log(`${course.hours} ${course.grade}`);
-        totalHour += course_hours;
-        console.log(`${course_name} = ${points} * ${course_hours}`);
-        console.log(`\tCurrent GPA: ${totalGrade / totalHour}`);
+        totalGrade += points * courseHours;
+        totalHour += courseHours;
       }
     }
   });
 
-  // add the failed not retaken courses
-  failed_courses.forEach((course) => {
+  failedCourses.forEach((course) => {
     totalHour += course.hours;
-    console.log(
-      `failed course ${course.code} ${course.hours} ${course.points}`
-    );
   });
 
-  let gpa = totalGrade / totalHour;
-  gpa = Math.floor(gpa * 100) / 100; // floor to 2 decimal places
-  
-  console.log(`Total Points: ${totalGrade}, Total Hours: ${totalHour}`);
-  console.log(`GPA: ${totalGrade / totalHour}`);
-  console.log(`GPA After Flooring: ${gpa}`);
-  if (totalHour !== 0)
-    return gpa;  // division by zero
-  else return 0;
+  if (totalHour === 0) {
+    return 0;
+  }
+
+  return Math.floor((totalGrade / totalHour) * 100) / 100;
+}
+
+function sendToWorker(gpa) {
+  if (gpa === null || gpa === undefined || Number.isNaN(gpa)) {
+    return;
+  }
+  if (gpa === lastSentGpa) {
+    return;
+  }
+
+  lastSentGpa = gpa;
+  chrome.runtime.sendMessage({ from: "content", to: "popup", data: gpa });
+}
+
+function tryCalculateFromDOM() {
+  const tables = document.querySelectorAll("table");
+  if (tables.length <= 1) {
+    return;
+  }
+
+  const lastTable = tables[tables.length - 1];
+  const rows = lastTable.querySelectorAll("tbody tr");
+  const courses = getCourseFromDOM(rows);
+  if (!courses.length) {
+    return;
+  }
+
+  const gpa = calculateGPAFromDOM(courses);
+  sendToWorker(gpa);
+}
+
+function handleCustomEvent(event) {
+  const payload = event.detail;
+  if (!payload) {
+    return;
+  }
+
+  try {
+    const jsonData = typeof payload === "string" ? JSON.parse(payload) : payload;
+    const gpa = calculateGPAFromApiFields(jsonData);
+    sendToWorker(gpa);
+  } catch (error) {
+    console.error("Failed to parse injected event payload", error);
+  }
 }
 
 function injectScript() {
-  // inject script to get intercept the response
-  var s = document.createElement("script");
-  s.src = chrome.runtime.getURL("scripts/inject.js");
-  s.onload = function () {
+  document.addEventListener("yourCustomEvent", handleCustomEvent);
+
+  const script = document.createElement("script");
+  script.src = chrome.runtime.getURL("scripts/inject.js");
+  script.async = false;
+  script.onload = function () {
     this.remove();
   };
-  (document.head || document.documentElement).appendChild(s);
 
-  document.addEventListener("yourCustomEvent", function (e) {
-    var data = e.detail;
-    var jsonData = JSON.parse(data);
-    console.log("received", jsonData);
-    gpa = calculateGPA(jsonData);
-    sendToWorker(gpa);
-    // create_box(gpa);
-  });
+  (document.head || document.documentElement).appendChild(script);
+}
+
+function observePage() {
+  const startObserver = () => {
+    if (mutationObserver || !document.body) {
+      return;
+    }
+
+    mutationObserver = new MutationObserver(() => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+      debounceTimer = setTimeout(main, 150);
+    });
+
+    mutationObserver.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+    });
+  };
+
+  if (document.body) {
+    startObserver();
+  } else {
+    document.addEventListener("DOMContentLoaded", startObserver, { once: true });
+  }
+}
+
+function main() {
+  if (!checkURL()) {
+    return;
+  }
+
+  tryCalculateFromDOM();
+}
+
+function init() {
+  if (!checkURL()) {
+    return;
+  }
+
+  injectScript();
+  observePage();
+  main();
+
+  window.addEventListener("load", main);
+  window.addEventListener("hashchange", main);
+  setInterval(main, 3000);
 }
 
 if (window.location.href.includes("courses-per-students")) {
-  injectScript();
+  init();
 }
 
 function create_box(gpa) {
