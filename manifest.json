@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "GPA Calc Extension",
+  "description": "This extension calculates the GPA of FCAI students",
+  "version": "0.1",
+  "action": {
+    "default_popup": "popup/popup.html"
+  },
+  "icons": {
+    "16": "/images/icon16.ico",
+    "32": "/images/icon32.ico",
+    "48": "/images/icon48.ico",
+    "128": "/images/icon128.ico"
+  },
+
+  "content_scripts": [
+    {
+      "js": ["scripts/content.js"],
+      "matches": ["http://193.227.14.58/*", "http://newecom.fci-cu.edu.eg/*"],
+
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "scripting",
+    "storage",
+    "webNavigation",
+    "webRequest"
+  ],
+  "host_permissions": ["http://*/*"],
+  "background": {
+    "service_worker": "scripts/background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["scripts/inject.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
